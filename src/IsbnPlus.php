@@ -2,7 +2,7 @@
 
 namespace Bluora\IsbnPlus;
 
-class IsbnPlus
+class IsbnPlus implements \Iterator
 {
     /**
      * ISBN Plus ID
@@ -32,6 +32,13 @@ class IsbnPlus
     private $search_key = 'q';
 
     /**
+     * Total curl requests made.
+     *
+     * @var integer
+     */
+    private $curl_request_count = 0;
+
+    /**
      * Search text
      * @var integer
      */
@@ -59,6 +66,13 @@ class IsbnPlus
     private $current_result = [];
 
     /**
+     * Current record.
+     *
+     * @var integer
+     */
+    private $current_record = 1;
+
+    /**
      * Total pages in result.
      *
      * @var integer
@@ -71,6 +85,14 @@ class IsbnPlus
      * @var integer
      */
     private $result_total_count = 0;
+
+
+    /**
+     * Limit the records.
+     *
+     * @var integer
+     */
+    private $query_limit = false;
 
     /**
      * Results by page.
@@ -92,6 +114,13 @@ class IsbnPlus
      * @var mixed
      */
     private $last_code = null;
+
+    /**
+     * Last error code.
+     *
+     * @var mixed
+     */
+    private $last_http_code = null;
 
     /**
      * Last error from a request.
@@ -157,7 +186,7 @@ class IsbnPlus
      * @param string $name
      * @param string $value
      *
-     * @return PwsCloud
+     * @return IsbnPlus
      */
     public function setConfig($name, $value)
     {
@@ -169,30 +198,40 @@ class IsbnPlus
         return $this;
     }
 
+    /**
+     * Set the page.
+     *
+     * @param  integer $page
+     *
+     * @return IsbnPlus
+     */
     public function page($page)
     {
         $this->current_page = $page;
+        $this->get();
         return $this;
     }
 
-    public function next()
+    /**
+     * Set the record limit
+     *
+     * @param  integer $limit
+     *
+     * @return IsbnPlus
+     */
+    public function limit($limit)
     {
-        if ($this->current_page < $result_total_pages) {
-            $this->current_page++;
-            return $this->get();
-        }
-        return false;
+        $this->query_limit = $limit;
+        return $this;
     }
 
-    public function previous()
-    {
-        if ($this->current_page > 1) {
-            $this->current_page--;
-            return $this->get();
-        }
-        return false;
-    }
-
+    /**
+     * Search on any field.
+     *
+     * @param  string $text
+     *
+     * @return IsbnPlus
+     */
     public function everything($text)
     {
         $this->search_key = 'q';
@@ -200,6 +239,13 @@ class IsbnPlus
         return $this;
     }
 
+    /**
+     * Search on the author field.
+     *
+     * @param  string $text
+     *
+     * @return IsbnPlus
+     */
     public function author($text)
     {
         $this->search_key = 'a';
@@ -207,6 +253,13 @@ class IsbnPlus
         return $this;
     }
 
+    /**
+     * Search on the category field.
+     *
+     * @param  string $text
+     *
+     * @return IsbnPlus
+     */
     public function category($text)
     {
         $this->search_key = 'c';
@@ -214,6 +267,13 @@ class IsbnPlus
         return $this;
     }
 
+    /**
+     * Search on the book series title field.
+     *
+     * @param  string $text
+     *
+     * @return IsbnPlus
+     */
     public function bookSeries($text)
     {
         $this->search_key = 's';
@@ -221,6 +281,13 @@ class IsbnPlus
         return $this;
     }
 
+    /**
+     * Search on the book title field.
+     *
+     * @param  string $text
+     *
+     * @return IsbnPlus
+     */
     public function bookTitle($text)
     {
         $this->search_key = 't';
@@ -231,7 +298,7 @@ class IsbnPlus
     /**
      * Get the data.
      *
-     * @return boolean|integer
+     * @return IsbnPlus
      */
     public function get()
     {
@@ -239,7 +306,8 @@ class IsbnPlus
            throw new Exception\MissingConfigException('Missing required API config.');
         }
         if (isset($this->page_results[$this->current_page])) {
-            return $this->current_result = $this->page_results[$this->current_page];
+            $this->current_result = $this->page_results[$this->current_page];
+            return $this;
         }
 
         $this->last_error = null;
@@ -265,6 +333,7 @@ class IsbnPlus
         $response_curl = curl_exec($curl);
         $this->last_code = curl_errno($curl);
         $this->last_http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $this->curl_request_count++;
 
         if ($this->last_code === 0 && $this->last_http_code < 300) {
             $response_xml = simplexml_load_string($response_curl, "SimpleXMLElement", LIBXML_NOCDATA);
@@ -274,7 +343,9 @@ class IsbnPlus
             $this->result_total_count = $this->last_response['page']['count'];
             $this->result_total_pages = $this->last_response['page']['pages'];
 
-            if (!isset($this->last_response['page']['results']['book'][0])) {
+            if (empty($this->last_response['page']['results'])) {
+                $this->current_result = [];
+            } elseif (!isset($this->last_response['page']['results']['book'][0])) {
                 $this->current_result = [$this->last_response['page']['results']['book']];
             } else {
                 $this->current_result = $this->last_response['page']['results']['book'];
@@ -302,20 +373,7 @@ class IsbnPlus
     /**
      * Get the current result.
      *
-     * @return object
-     */
-    public function first()
-    {
-        if (isset($this->current_result[0])) {
-            return $this->current_result[0];
-        }
-        return null;
-    }
-
-    /**
-     * Get the current result.
-     *
-     * @return object
+     * @return array
      */
     public function getResult()
     {
@@ -325,7 +383,7 @@ class IsbnPlus
     /**
      * Get the error message.
      *
-     * @return object
+     * @return integer
      */
     public function getCode()
     {
@@ -335,7 +393,7 @@ class IsbnPlus
     /**
      * Get the error message.
      *
-     * @return object
+     * @return integer
      */
     public function getHttpCode()
     {
@@ -345,10 +403,98 @@ class IsbnPlus
     /**
      * Get the error message.
      *
-     * @return object
+     * @return string
      */
     public function getError()
     {
         return $this->last_error;
     }
+
+    /**
+     * Previous record.
+     *
+     * @return array
+     */
+    public function previous()
+    {
+        $this->current_record--;
+        if ($this->current_record < 0) {
+            $this->current_page--;
+            $this->current_record = 9;
+            $this->get();
+        }
+        return $this->current();
+    }
+
+    /**
+     * Rewind the result.
+     *
+     * @return array
+     */
+    public function rewind()
+    {
+        $this->current_page = 1;
+        $this->current_record = 0;
+        $this->get();
+        return $this->current();
+    }
+
+    /**
+     * Get the current result.
+     *
+     * @return array|null
+     */
+    public function current()
+    {
+        if ($this->curl_request_count == 0) {
+            $this->get();
+        }
+        if (isset($this->current_result[$this->current_record])) {
+            return $this->current_result[$this->current_record];
+        }
+        return null;
+    }
+
+    /**
+     * Get the row key.
+     *
+     * @return integer
+     */
+    public function key() 
+    {
+        return (($this->current_page - 1) * 10) + $this->current_record;
+    }
+
+    /**
+     * Rewind the result.
+     *
+     * @return array
+     */
+    public function next()
+    {
+        $this->current_record++;
+        if ($this->current_record >= 10) {
+            $this->current_page++;
+            $this->current_record = 0;
+            $this->get();
+        }
+        return $this->current();
+    }
+
+    /**
+     * Has results.
+     *
+     * @return boolean
+     */
+    public function valid()
+    {
+        if ($this->curl_request_count == 0) {
+            return true;
+        }
+        if ($this->query_limit !== false && $this->query_limit < $this->key()+1) {
+            return false;
+        }
+        return !$this->error() && ((($this->current_page - 1) * 10) + $this->current_record) <= $this->result_total_count;
+    }
+
 }
