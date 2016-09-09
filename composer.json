@@ -1,0 +1,25 @@
+{
+    "name": "bluora/php-isbn-plus-api",
+    "description": "Providers an interface to ISBN Plus API",
+    "keywords": ["isbn plus", "api", "php"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Rocco Howard",
+            "email": "rocco@bluora.com.au"
+        }
+    ],
+    "require": {
+        "php": ">=5.5.0",
+    },
+    "require-dev": {
+        "phpunit/phpunit": "4.*",
+        "codeclimate/php-test-reporter": "dev-master",
+        "phpmd/phpmd" : "@stable"
+    },
+    "autoload": {
+        "psr-4": {
+            "Bluora\\IsbnPlus\\": "src/"
+        }
+    }
+}
