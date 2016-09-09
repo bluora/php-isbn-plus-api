@@ -5,84 +5,86 @@ namespace Bluora\IsbnPlus;
 class IsbnPlus implements \Iterator
 {
     /**
-     * ISBN Plus ID
+     * ISBN Plus ID.
      *
      * @var string
      */
     private $client_id;
 
     /**
-     * ISBN Plus Key
+     * ISBN Plus Key.
      *
      * @var string
      */
     private $client_key;
 
     /**
-     * ISBN Plus URL
+     * ISBN Plus URL.
      *
      * @var string
      */
     private $client_url = 'https://api-2445581351187.apicast.io/search';
 
     /**
-     * Search key
-     * @var integer
+     * Search key.
+     *
+     * @var int
      */
     private $search_key = 'q';
 
     /**
      * Total curl requests made.
      *
-     * @var integer
+     * @var int
      */
     private $curl_request_count = 0;
 
     /**
-     * Search text
-     * @var integer
+     * Search text.
+     *
+     * @var int
      */
     private $search_text = '';
 
     /**
      * Current page.
      *
-     * @var integer
+     * @var int
      */
     private $current_page = 1;
 
     /**
      * Current order.
      *
-     * @var integer
+     * @var int
      */
     private $current_order = 'published';
 
     /**
      * Current result.
      *
-     * @var integer
+     * @var int
      */
     private $current_result = [];
 
     /**
      * Current record.
      *
-     * @var integer
+     * @var int
      */
     private $current_record = 1;
 
     /**
      * Total pages in result.
      *
-     * @var integer
+     * @var int
      */
     private $result_total_pages = 0;
 
     /**
      * Total books in result.
      *
-     * @var integer
+     * @var int
      */
     private $result_total_count = 0;
 
@@ -90,7 +92,7 @@ class IsbnPlus implements \Iterator
     /**
      * Limit the records.
      *
-     * @var integer
+     * @var int
      */
     private $query_limit = false;
 
@@ -139,6 +141,7 @@ class IsbnPlus implements \Iterator
         $this->setEnv('id');
         $this->setEnv('key');
         $this->setEnv('url');
+
         return $this;
     }
 
@@ -161,6 +164,7 @@ class IsbnPlus implements \Iterator
                 $this->$property = $set_value;
             }
         }
+
         return $this;
     }
 
@@ -175,8 +179,10 @@ class IsbnPlus implements \Iterator
     {
         if (property_exists($this, 'client_'.$name)) {
             $name = 'client_'.$name;
+
             return !empty($this->$name);
         }
+
         return false;
     }
 
@@ -201,7 +207,7 @@ class IsbnPlus implements \Iterator
     /**
      * Set the page.
      *
-     * @param  integer $page
+     * @param int $page
      *
      * @return IsbnPlus
      */
@@ -209,26 +215,28 @@ class IsbnPlus implements \Iterator
     {
         $this->current_page = $page;
         $this->get();
+
         return $this;
     }
 
     /**
-     * Set the record limit
+     * Set the record limit.
      *
-     * @param  integer $limit
+     * @param int $limit
      *
      * @return IsbnPlus
      */
     public function limit($limit)
     {
         $this->query_limit = $limit;
+
         return $this;
     }
 
     /**
      * Search on any field.
      *
-     * @param  string $text
+     * @param string $text
      *
      * @return IsbnPlus
      */
@@ -236,13 +244,14 @@ class IsbnPlus implements \Iterator
     {
         $this->search_key = 'q';
         $this->search_text = $text;
+
         return $this;
     }
 
     /**
      * Search on the author field.
      *
-     * @param  string $text
+     * @param string $text
      *
      * @return IsbnPlus
      */
@@ -250,13 +259,14 @@ class IsbnPlus implements \Iterator
     {
         $this->search_key = 'a';
         $this->search_text = $text;
+
         return $this;
     }
 
     /**
      * Search on the category field.
      *
-     * @param  string $text
+     * @param string $text
      *
      * @return IsbnPlus
      */
@@ -264,13 +274,14 @@ class IsbnPlus implements \Iterator
     {
         $this->search_key = 'c';
         $this->search_text = $text;
+
         return $this;
     }
 
     /**
      * Search on the book series title field.
      *
-     * @param  string $text
+     * @param string $text
      *
      * @return IsbnPlus
      */
@@ -278,13 +289,14 @@ class IsbnPlus implements \Iterator
     {
         $this->search_key = 's';
         $this->search_text = $text;
+
         return $this;
     }
 
     /**
      * Search on the book title field.
      *
-     * @param  string $text
+     * @param string $text
      *
      * @return IsbnPlus
      */
@@ -292,6 +304,7 @@ class IsbnPlus implements \Iterator
     {
         $this->search_key = 't';
         $this->search_text = $text;
+
         return $this;
     }
 
@@ -303,10 +316,11 @@ class IsbnPlus implements \Iterator
     public function get()
     {
         if (!$this->hasConfig('id') || !$this->hasConfig('key') || !$this->hasConfig('url')) {
-           throw new Exception\MissingConfigException('Missing required API config.');
+            throw new Exception\MissingConfigException('Missing required API config.');
         }
         if (isset($this->page_results[$this->current_page])) {
             $this->current_result = $this->page_results[$this->current_page];
+
             return $this;
         }
 
@@ -336,7 +350,7 @@ class IsbnPlus implements \Iterator
         $this->curl_request_count++;
 
         if ($this->last_code === 0 && $this->last_http_code < 300) {
-            $response_xml = simplexml_load_string($response_curl, "SimpleXMLElement", LIBXML_NOCDATA);
+            $response_xml = simplexml_load_string($response_curl, 'SimpleXMLElement', LIBXML_NOCDATA);
             $response_json = json_encode($response_xml);
             $this->last_response = json_decode($response_json, true);
 
@@ -357,17 +371,18 @@ class IsbnPlus implements \Iterator
             $this->last_error = curl_error($curl);
         }
         curl_close($curl);
+
         return $this;
     }
 
     /**
      * Most recent query failed.
      *
-     * @return boolean
+     * @return bool
      */
     public function error()
     {
-        return ($this->last_code < 0 || $this->last_http_code >= 400);
+        return $this->last_code < 0 || $this->last_http_code >= 400;
     }
 
     /**
@@ -383,7 +398,7 @@ class IsbnPlus implements \Iterator
     /**
      * Get the error message.
      *
-     * @return integer
+     * @return int
      */
     public function getCode()
     {
@@ -393,7 +408,7 @@ class IsbnPlus implements \Iterator
     /**
      * Get the error message.
      *
-     * @return integer
+     * @return int
      */
     public function getHttpCode()
     {
@@ -423,6 +438,7 @@ class IsbnPlus implements \Iterator
             $this->current_record = 9;
             $this->get();
         }
+
         return $this->current();
     }
 
@@ -436,6 +452,7 @@ class IsbnPlus implements \Iterator
         $this->current_page = 1;
         $this->current_record = 0;
         $this->get();
+
         return $this->current();
     }
 
@@ -452,15 +469,14 @@ class IsbnPlus implements \Iterator
         if (isset($this->current_result[$this->current_record])) {
             return $this->current_result[$this->current_record];
         }
-        return null;
     }
 
     /**
      * Get the row key.
      *
-     * @return integer
+     * @return int
      */
-    public function key() 
+    public function key()
     {
         return (($this->current_page - 1) * 10) + $this->current_record;
     }
@@ -478,23 +494,24 @@ class IsbnPlus implements \Iterator
             $this->current_record = 0;
             $this->get();
         }
+
         return $this->current();
     }
 
     /**
      * Has results.
      *
-     * @return boolean
+     * @return bool
      */
     public function valid()
     {
         if ($this->curl_request_count == 0) {
             return true;
         }
-        if ($this->query_limit !== false && $this->query_limit < $this->key()+1) {
+        if ($this->query_limit !== false && $this->query_limit < $this->key() + 1) {
             return false;
         }
+
         return !$this->error() && ((($this->current_page - 1) * 10) + $this->current_record) <= $this->result_total_count;
     }
-
 }
